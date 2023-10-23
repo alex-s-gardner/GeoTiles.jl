@@ -1,0 +1,22 @@
+name = "GeoTiles"
+uuid = "2d466ccc-baa7-41f7-823f-6e09e7c71845"
+authors = ["Alex Gardner <alex.s.gardner@jpl.nasa.gov>"]
+version = "1.0.0-DEV"
+
+[deps]
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Extents = "411431e0-e8b7-467b-b5e0-f676ba4f2910"
+FastGeoProjections = "981663e8-0c94-46dd-b2cf-efc8480900ec"
+GeoFormatTypes = "68eda718-8dee-11e9-39e7-89f7f65f511f"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Scanf = "6ef1bc8b-493b-44e1-8d40-549aa65c4b41"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
