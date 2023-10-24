@@ -420,13 +420,11 @@ function readall(path2dir; suffix=nothing, extent=nothing, filetype=:arrow)
         ids = ids[ind]
     end
 
-    gt = DataFrame()
+    gt = DataFrame[]
     for fn in fns
-        gt = append!(gt, GeoTiles.read(fn, filetype=:arrow))
+        gt = push!(gt, GeoTiles.read(fn, filetype=:arrow))
     end 
     
-    metadata!(gt, "geotile_id", ids, style=:note)
-
     return gt
 end
 

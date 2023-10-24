@@ -95,7 +95,8 @@ Load only geotiles that intersect extent
 ```julia-repl
 julia> extent = Extent(Lat=(70.,71.), Lon=(50.,51.));
 julia> GeoTiles.readall(folder; extent=extent)
-2×3 DataFrame
+1-element Vector{DataFrame}:
+ 2×3 DataFrame
  Row │ latitude  longitude  data    
      │ Float64   Float64    Float64 
 ─────┼──────────────────────────────
