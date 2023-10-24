@@ -3,6 +3,7 @@ import GeoTiles
 # utilities for building and working with GeoTiles
 const world = Extent(Lat=(-90, 90), Lon = (-180, 180))
 
+
 """
     _extent(lat, lon, width)
 
@@ -23,6 +24,7 @@ function _extent(lat, lon, width)
     return extent 
 end
 
+
 """
     extent(id)
 
@@ -35,7 +37,6 @@ function extent(id::String)
 
     return extent
 end
-
 
 
 """
@@ -64,17 +65,17 @@ end
 
 
 """
-    crop!(gt::DataFrame, extent::NamedTuple)
+    crop!(gt::DataFrame, extent)
 
 Crop geotile dataframe to only include data that falls within extent
 """
-function crop!(gt::DataFrame, extent::NamedTuple)
+function crop!(gt::DataFrame, extent)
 
-    ind = .!within(gt.latitude, gt.longitude, extent::Extent)
+    ind = .!within.(gt.latitude, gt.longitude, Ref(extent))
     if any(ind)
         gt = deleteat!(gt,ind)
     end
-    
+
     return gt
 end
 
@@ -82,7 +83,7 @@ end
 """
     isgeotile(df::DataFrame)
 
-Check if `DataFrame` is GeoTile complient. 
+Check if `DataFrame` is GeoTile compliant. 
 All that is required is "latitude" and "longitude" column names and geotile_id 
 in the metadata
 """
@@ -193,17 +194,12 @@ end
     read(path2file)
 Read in Arrow file as a GeoTile DataFrame by adding geotile_id to the metadata
 """
-function read(path2file; filetype = :arrow, extent = nothing)
+function read(path2file; filetype = :arrow)
 
     if filetype == :arrow
         gt = DataFrame(Arrow.Table(path2file))
     else
         error("$filetype is not a supported file type")
-    end
-
-    if !isnothing(extent)
-        # this will cause a eager reading of Arrow file
-        crop!(gt, extent)
     end
 
     # add geotile_id to metadata
@@ -406,35 +402,74 @@ end
 
 
 """
-    readall(path2dir; filesuffix = nothing, extent = nothing)
+    readall(path2dir; suffix = nothing, extent = nothing, filetype=:arrow)
 
-load all geotiles from path2dir. If filesuffix is provided then only those files with 
-matching suffix will be read in. If extent is provided then only geotiles falling within 
-extent will be loaded
+load all geotiles from path2dir. If suffix is provided then only those files with 
+matching suffix will be read in. If extent is provided all geotiles that intersect the 
+extent will be loaded.
 """
-function readall(path2dir; filesuffix=nothing, extent=nothing)
+function readall(path2dir; suffix=nothing, extent=nothing, filetype=:arrow)
 
-    fns = allfiles(path2dir; fn_startswith="lat[", fn_endswith=filesuffix)
+    fns = allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
     ids = GeoTiles.idfromfilename.(fns)
 
     if !isnothing(extent)
         fns_extents = GeoTiles.extent.(ids)
-        ind = Extents.touches.(Ref(extent), fns_extents)
+        ind = Extents.intersects.(Ref(extent), fns_extents)
         fns = fns[ind]
         ids = ids[ind]
-    
-        gt = DataFrame()
-        for fn in fns
-            gt = append!(gt, GeoTiles.read(fn; extent=extent))
-        end
-    else
-        gt = DataFrame()
-        for fn in fns
-            gt = append!(gt, GeoTiles.read(fn))
-        end 
+    end
+
+    gt = DataFrame()
+    for fn in fns
+        gt = append!(gt, GeoTiles.read(fn, filetype=:arrow))
     end 
     
     metadata!(gt, "geotile_id", ids, style=:note)
 
     return gt
+end
+
+
+"""
+    group(df, geotiles)
+
+Return dataframes seperated by 'geotiles' extents. Unique geotile id is added as metadata 
+to each dataframe.
+"""
+function group(df,geotiles)
+    df[!, :gtidx] .= Int64(0)
+    for r in eachrow(df)
+        r.gtidx = findfirst(GeoTiles.within.(r.latitude, r.longitude, geotiles.extent))
+    end
+    df = groupby(df, :gtidx)
+
+    gts = DataFrame[]
+    for df0 in df
+        gtidx = df0.gtidx[1]
+        if gtidx == 0
+            @warn("not all data contained within provided GeoTiles")
+            continue
+        end
+        id = geotiles[gtidx, :id]
+        df0 = select(df0, Not(:gtidx))
+        push!(gts, metadata!(df0, "geotile_id", id, style=:note))
+    end
+    return gts
+end
+
+
+"""
+    save(folder, suffix, gt; filetype = :arrow)
+Save geotile compliant dataframe to disk. 
+"""
+function save(folder, suffix, gt; filetype = :arrow)
+    id = metadata(gt, "geotile_id")
+    path2file = joinpath(folder, id*suffix)
+
+    if filetype == :arrow
+        Arrow.write(path2file, gt)
+    else
+        error("$filetype is not a supported file type")
+    end
 end
