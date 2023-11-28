@@ -440,18 +440,10 @@ extent will be loaded.
 """
 function readall(path2dir; suffix=nothing, extent=nothing, filetype=:arrow)
 
-    fns = GeoTiles.allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
-    ids = GeoTiles.idfromfilename.(fns)
-
-    if !isnothing(extent)
-        fns_extents = GeoTiles.extent.(ids)
-        ind = Extents.intersects.(Ref(extent), fns_extents)
-        fns = fns[ind]
-        ids = ids[ind]
-    end
+    df = tileslist(path2dir; suffix, extent)
 
     gt = DataFrame[]
-    for fn in fns
+    for fn in df.path2file
         gt = push!(gt, GeoTiles.read(fn, filetype=:arrow))
     end 
     
@@ -500,4 +492,28 @@ function save(folder, suffix, gt; filetype = :arrow)
     else
         error("$filetype is not a supported file type")
     end
+end
+
+
+"""
+    tileslist(path2dir; suffix = nothing, extent = nothing, filetype=:arrow)
+
+return a DataFrame of tile ids and extents. If suffix is provided then only those files with 
+matching suffix will be read in. If extent is provided all geotiles that intersect the 
+extent will be loaded.
+"""
+function tileslist(path2dir; suffix = nothing, extent = nothing)
+    fns = GeoTiles.allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
+    ids = GeoTiles.idfromfilename.(fns)
+    fns_extents = GeoTiles.extent.(ids)
+
+    if !isnothing(extent)
+        ind = Extents.intersects.(Ref(extent), fns_extents)
+        fns = fns[ind]
+        ids = ids[ind]
+        fns_extents = fns_extents[ind]
+    end
+
+    df = DataFrame(:id => ids, :extent => fns_extents, :path2file => fns)
+    return df
 end
