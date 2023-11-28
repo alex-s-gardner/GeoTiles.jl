@@ -179,13 +179,17 @@ add x and y coodinates for local utm or polar stereo zone to a geotile DataFrame
 function utm!(gt::DataFrame)
     extent = GeoTiles.extent(metadata(gt, "geotile_id"))
     epsg = utm_epsg(extent)
-    trans = FGP.Transformation(GFT.EPSG(4326), epsg)
-
-    gt[!, :X], gt[!, :Y] = trans(gt.latitude, gt.longitude)
-
     # add epsg to metadata
     metadata!(gt, "XY_epsg", epsg, style=:note)
 
+    if isempty(gt)
+        gt[!, :X] = []
+        gt[!, :Y] = []
+    else
+        trans = FGP.Transformation(GFT.EPSG(4326), epsg)
+        gt[!, :X], gt[!, :Y] = trans(gt.latitude, gt.longitude)
+    end
+    
     return gt
 end
 
@@ -362,13 +366,9 @@ function allfiles(
 )
 
     filelist = String[]
-    for (root, _, files) in walkdir(
-        rootdir, 
-        topdown=topdown, 
-        follow_symlinks=follow_symlinks, 
-        onerror=onerror
-        )
 
+    if subfolders == false
+        files = readir(rootdir)
         for file in files
             endswith_tf = true
             startswith_tf = true
@@ -389,14 +389,44 @@ function allfiles(
             tf = and_or(and_or(endswith_tf, startswith_tf), containsin_tf)
 
             if tf
-                push!(filelist, joinpath(root, file))
+                push!(filelist, joinpath(rootdir, file))
             end
         end
+    else
+        # walk dir is very slow so use readdir when you can
+        for (root, _, files) in walkdir(
+            rootdir, 
+            topdown=topdown, 
+            follow_symlinks=follow_symlinks, 
+            onerror=onerror
+            )
 
-        if subfolders == false
-            return filelist
+            for file in files
+                endswith_tf = true
+                startswith_tf = true
+                containsin_tf = true
+
+                if !isnothing(fn_endswith)
+                    endswith_tf = any(endswith.(file, fn_endswith))
+                end
+
+                if !isnothing(fn_startswith)
+                    startswith_tf = any(startswith.(file, fn_startswith))
+                end
+
+                if !isnothing(fn_contains)
+                    containsin_tf = any(contains.(file, fn_contains))
+                end
+
+                tf = and_or(and_or(endswith_tf, startswith_tf), containsin_tf)
+
+                if tf
+                    push!(filelist, joinpath(root, file))
+                end
+            end
         end
     end
+
     return filelist
 end
 
@@ -410,7 +440,7 @@ extent will be loaded.
 """
 function readall(path2dir; suffix=nothing, extent=nothing, filetype=:arrow)
 
-    fns = allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
+    fns = GeoTiles.allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
     ids = GeoTiles.idfromfilename.(fns)
 
     if !isnothing(extent)
