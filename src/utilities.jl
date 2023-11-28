@@ -440,7 +440,7 @@ extent will be loaded.
 """
 function readall(path2dir; suffix=nothing, extent=nothing, filetype=:arrow)
 
-    df = tileslist(path2dir; suffix, extent)
+    df = listtiles(path2dir; suffix, extent)
 
     gt = DataFrame[]
     for fn in df.path2file
@@ -496,13 +496,13 @@ end
 
 
 """
-    tileslist(path2dir; suffix = nothing, extent = nothing, filetype=:arrow)
+    listtiles(path2dir; suffix = nothing, extent = nothing, filetype=:arrow)
 
 return a DataFrame of tile ids and extents. If suffix is provided then only those files with 
 matching suffix will be read in. If extent is provided all geotiles that intersect the 
 extent will be loaded.
 """
-function tileslist(path2dir; suffix = nothing, extent = nothing)
+function listtiles(path2dir; suffix = nothing, extent = nothing)
     fns = GeoTiles.allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
     ids = GeoTiles.idfromfilename.(fns)
     fns_extents = GeoTiles.extent.(ids)
