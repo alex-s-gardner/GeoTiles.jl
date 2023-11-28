@@ -368,7 +368,7 @@ function allfiles(
     filelist = String[]
 
     if subfolders == false
-        files = readir(rootdir)
+        files = readdir(rootdir)
         for file in files
             endswith_tf = true
             startswith_tf = true
