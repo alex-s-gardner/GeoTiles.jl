@@ -1,7 +1,8 @@
 import GeoTiles
 
 # utilities for building and working with GeoTiles
-const world = Extent(Lat=(-90, 90), Lon = (-180, 180))
+# use X and Y to be consistent with Rasters.jl
+const world = Extent(Y=(-90, 90), X = (-180, 180))
 
 
 """
@@ -12,14 +13,13 @@ Internal that returns extents of geotile given center latitude, longitude and ge
 # Example
 ```julia-repl
 julia> ext = GeoTiles._extent(80,80,2)
-Extent(Lat = (79.0, 81.0), Lon = (79.0, 81.0))
+Extent(X = (79.0, 81.0), Y = (79.0, 81.0))
 ```
 """
 function _extent(lat, lon, width)
      
     halfwidth = width / 2;
-    extent = Extent(Lat=((lat - halfwidth), (lat + halfwidth)),
-        Lon=((lon - halfwidth), (lon + halfwidth)))
+    extent = Extent(X=((lon - halfwidth), (lon + halfwidth)), Y=((lat - halfwidth), (lat + halfwidth)))
     
     return extent 
 end
@@ -33,7 +33,7 @@ Returns the geotile extent given a geotile `id`
 function extent(id::String)
 
     a = @scanf id "lat[%d%d]lon[%d%d]" Float64 Float64 Float64 Float64
-    extent = Extent(Lat=(a[2], a[3]), Lon=(a[4], a[5]))
+    extent = Extent(X=(a[4], a[5]), Y=(a[2], a[3]))
 
     return extent
 end
@@ -46,7 +46,7 @@ True if a point falls within extent
 # Example
 ```julia-repl
 julia> ext = GeoTiles._extent(80,80,2)
-Extent(Lat = (79.0, 81.0), Lon = (79.0, 81.0))
+Extent(Y = (79.0, 81.0), X = (79.0, 81.0))
 julia> ind = GeoTiles.within(80., 80.1, ext)
 true
 julia> ind = GeoTiles.within(80., 81.1, ext)
@@ -55,10 +55,10 @@ false
 """
 function within(lat, lon, extent::Extent)
     
-    in = (lat > extent.Lat[1]) && 
-        (lat <= extent.Lat[2]) && 
-        (lon > extent.Lon[1]) && 
-        (lon <= extent.Lon[2])
+    in = (lat > extent.Y[1]) && 
+        (lat <= extent.Y[2]) && 
+        (lon > extent.X[1]) && 
+        (lon <= extent.X[2])
 
     return in
 end
@@ -117,9 +117,9 @@ julia> GeoTiles.define(2)
    Row │ id                        extent                            
        │ String                    Extent…                           
 ───────┼─────────────────────────────────────────────────────────────
-     1 │ lat[-90-88]lon[-180-178]  Extent{(:Lat, :Lon), Tuple{Tuple…
+     1 │ lat[-90-88]lon[-180-178]  Extent{(:X, :Y), Tuple{Tuple…
    ⋮   │            ⋮                              ⋮
- 16200 │ lat[+88+90]lon[+178+180]  Extent{(:Lat, :Lon), Tuple{Tuple…
+ 16200 │ lat[+88+90]lon[+178+180]  Extent{(:X, :Y), Tuple{Tuple…
                                                    16198 rows omitted
 ```
 """
@@ -132,8 +132,8 @@ function define(width::Number; extent=nothing)
     # geotile package uses fixed extents for consistancy, once defined a supset 
     # of tiles can be selected
     halfwidth = width/2;
-    centerlat = (world.Lat[1] + halfwidth):width:(world.Lat[2] - halfwidth)
-    centerlon = (world.Lon[1] + halfwidth):width:(world.Lon[2] - halfwidth)
+    centerlat = (world.Y[1] + halfwidth):width:(world.Y[2] - halfwidth)
+    centerlon = (world.X[1] + halfwidth):width:(world.X[2] - halfwidth)
 
     # trim to user supplied extent
     if !isnothing(extent)
@@ -159,13 +159,13 @@ Internal that returns the geotile id given a geotile `extent`
 function _id(extent::Extent)  
 
     # determine minimum number of decimals for the id
-    halfwidth = (extent.Lat[2] .- extent.Lat[1]) / 2
+    halfwidth = (extent.Y[2] .- extent.Y[1]) / 2
     ~, n = Base.Ryu.reduce_shortest(halfwidth)
     n < 0 ? n = -n : n =0
 
     txt = "lat[%+03.$(n)f%+03.$(n)f]lon[%+04.$(n)f%+04.$(n)f]"
     f = Printf.Format(txt)
-    id = Printf.format(f, extent.Lat[1], extent.Lat[2], extent.Lon[1], extent.Lon[2])
+    id = Printf.format(f, extent.Y[1], extent.Y[2], extent.X[1], extent.X[2])
  
     return id
 end
@@ -243,7 +243,7 @@ Returns GeoTile `Extent` given a file name or file path
 # Example
 ```julia-repl
 julia> GeoTiles.extentfromfilename("/Users/gardnera/data/height_change/2000_2022/lat[+60+62]lon[-146-144].cop30_v2")
-Extent(Lat = (60.0, 62.0), Lon = (-146.0, -144.0))
+Extent(Y = (60.0, 62.0), X = (-146.0, -144.0))
 ```
 """
 function extentfromfilename(filename)
@@ -302,18 +302,18 @@ end
 
 function utm_epsg(extent::Extent)
     cntr = _center(extent)
-    epsg = utm_epsg(cntr.Lat,  cntr.Lon)
+    epsg = utm_epsg(cntr.Y,  cntr.X)
     return epsg
 end
 
 """
     _center(extent::Extent
-Internal that returns the center Lat and Lon of an Extent
+Internal that returns the center Y and X of an Extent
 """
 function _center(extent::Extent)
-    lat = (extent.Lat[1] + extent.Lat[2])/2
-    lon = (extent.Lon[1] + extent.Lon[2])/2
-    return (Lat = lat, Lon = lon)
+    lat = (extent.Y[1] + extent.Y[2])/2
+    lon = (extent.X[1] + extent.X[2])/2
+    return (Y = lat, X = lon)
 end
 
 
