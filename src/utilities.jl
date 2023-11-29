@@ -478,6 +478,10 @@ function group(df,geotiles)
     return gts
 end
 
+function path2tile(folder, id, suffix)
+    return joinpath(folder, id*suffix)
+end
+
 
 """
     save(folder, suffix, gt; filetype = :arrow)
@@ -485,7 +489,7 @@ Save geotile compliant dataframe to disk.
 """
 function save(folder, suffix, gt; filetype = :arrow)
     id = metadata(gt, "geotile_id")
-    path2file = joinpath(folder, id*suffix)
+    path2file = path2tile(folder, id, suffix)
 
     if filetype == :arrow
         Arrow.write(path2file, gt)
