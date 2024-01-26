@@ -568,8 +568,8 @@ function listtiles_intersecting(path2dir, suffixes; extent=nothing, filetype=:ar
         end
     end
 
-    gtfilelist = gtfilelist[1][:, [:id, :extent]]
-    df = insertcols!(gtfilelist, (suffixes .=> [gt.paths2file for gt in gtfilelist])...)
+    df = gtfilelist[1][:, [:id, :extent]]
+    insertcols!(df, (suffixes .=> [gt.paths2file for gt in gtfilelist])...)
 
     return df
 end
