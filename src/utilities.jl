@@ -499,7 +499,7 @@ end
 
 
 """
-    listtiles(path2dir; suffix = nothing, extent = nothing, filetype=:arrow)
+    listtiles(path2dir; suffix = nothing, extent = nothing)
 
 return a DataFrame of tile ids and extents. If suffix is provided then only those files with 
 matching suffix will be listed. If extent is provided all geotiles that intersect the 
@@ -548,12 +548,12 @@ end
 
 
 """
-    listtiles_intersecting(path2dir, suffixes; extent = nothing, filetype=:arrow)
+    listtiles_intersecting(path2dir, suffixes; extent = nothing)
 
 return a DataFrame of tile ids, extents, and paths to each file suffix for which ALL suffixes 
 files exist.  If extent is provided all geotiles that intersect the extent will be listed.
 """
-function listtiles_intersecting(path2dir, suffixes; extent=nothing, filetype=:arrow)
+function listtiles_intersecting(path2dir, suffixes; extent=nothing)
 
     # find requested geotiles within region
     gtfilelist = [GeoTiles.listtiles.(Ref(path2dir); suffix, extent) for suffix in suffixes]
@@ -569,7 +569,7 @@ function listtiles_intersecting(path2dir, suffixes; extent=nothing, filetype=:ar
     end
 
     df = gtfilelist[1][:, [:id, :extent]]
-    insertcols!(df, (suffixes .=> [gt.paths2file for gt in gtfilelist])...)
+    insertcols!(df, (suffixes .=> [gt.path2file for gt in gtfilelist])...)
 
     return df
 end
