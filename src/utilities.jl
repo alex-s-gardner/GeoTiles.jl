@@ -1,5 +1,3 @@
-import GeoTiles
-
 # utilities for building and working with GeoTiles
 # use X and Y to be consistent with Rasters.jl
 const world = Extent(Y=(-90, 90), X = (-180, 180))
@@ -479,6 +477,7 @@ function group(df,geotiles)
 end
 
 function path2tile(folder, id, suffix)
+    suffix = suffixcheck(suffix)
     return joinpath(folder, id*suffix)
 end
 
@@ -507,6 +506,7 @@ matching suffix will be read in. If extent is provided all geotiles that interse
 extent will be loaded.
 """
 function listtiles(path2dir; suffix = nothing, extent = nothing)
+    suffix = suffixcheck(suffix)
     fns = GeoTiles.allfiles(path2dir; fn_startswith="lat[", fn_endswith=suffix)
     ids = GeoTiles.idfromfilename.(fns)
     fns_extents = GeoTiles.extent.(ids)
@@ -521,3 +521,28 @@ function listtiles(path2dir; suffix = nothing, extent = nothing)
     df = DataFrame(:id => ids, :extent => fns_extents, :path2file => fns)
     return df
 end
+
+"""
+    suffixcheck(suffix)
+
+returns a standardized file suffix sting with a leading period
+"""
+function suffixcheck(suffix::String)
+
+    # add leading period if missing
+    if suffix[1] != "."
+        suffix = "."*suffix
+    end
+
+    return suffix
+end
+
+function suffixcheck(suffix::Symbol)
+    suffix = suffixcheck(string(suffix))
+    return suffix
+end
+
+function suffixcheck(suffix::Nothing)
+    return suffix
+end
+
