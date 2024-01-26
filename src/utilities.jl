@@ -502,8 +502,8 @@ end
     listtiles(path2dir; suffix = nothing, extent = nothing, filetype=:arrow)
 
 return a DataFrame of tile ids and extents. If suffix is provided then only those files with 
-matching suffix will be read in. If extent is provided all geotiles that intersect the 
-extent will be loaded.
+matching suffix will be listed. If extent is provided all geotiles that intersect the 
+extent will be listed.
 """
 function listtiles(path2dir; suffix = nothing, extent = nothing)
     suffix = suffixcheck(suffix)
@@ -546,3 +546,31 @@ function suffixcheck(suffix::Nothing)
     return suffix
 end
 
+
+"""
+    listtiles_intersecting(path2dir, suffixes; extent = nothing, filetype=:arrow)
+
+return a DataFrame of tile ids, extents, and paths to each file suffix for which ALL suffixes 
+files exist.  If extent is provided all geotiles that intersect the extent will be listed.
+"""
+function listtiles_intersecting(path2dir, suffixes; extent=nothing, filetype=:arrow)
+
+    # find requested geotiles within region
+    gtfilelist = [GeoTiles.listtiles.(Ref(path2dir); suffix, extent) for suffix in suffixes]
+
+    # ensure geotiles that exisit for all suffix
+    if length(suffixes) > 1
+        ids = intersect([gt.id for gt in gtfilelist]...)
+
+        # only include files with intersecting geotiles            
+        for gt in gtfilelist
+            filter!(row -> row.id in ids, gt)
+        end
+    end
+
+    paths2files = [gt.id for gt in gtfilelist]
+    gtfilelist = gtfilelist[1][:, [:id, :extent]]
+    df = insertcols!(gtfilelist, (suffixes .=> paths2files)...)
+
+    return df
+end
