@@ -104,7 +104,7 @@ end
 
 
 """
-    define(width)
+    define(width; extent=nothing)
 
 Returns a geotiles, a DataFrame with geotile ids and extents
 
@@ -133,18 +133,17 @@ function define(width::Number; extent=nothing)
     centerlat = (world.Y[1] + halfwidth):width:(world.Y[2] - halfwidth)
     centerlon = (world.X[1] + halfwidth):width:(world.X[2] - halfwidth)
 
-    # trim to user supplied extent
-    if !isnothing(extent)
-        in = within.(centerlat, centerlon, Ref(extent))
-        centerlat = centerlat[in]
-        centerlon = centerlon[in]
-    end
+    extent0 = vec([_extent(lat, lon, width) for lon in(centerlon), lat in(centerlat)]);
 
-    extent = vec([_extent(lat, lon, width) for lon in(centerlon), lat in(centerlat)]);
+    # trim to user supplied extent    
+    if !isnothing(extent)
+        ind = Extents.intersects.(Ref(extent), extent0)
+        extent0 = extent0[ind]
+    end
     
-    id = _id.(extent)
+    id = _id.(extent0)
     
-    geotiles = DataFrame(id=id, extent=extent)
+    geotiles = DataFrame(id=id, extent=extent0)
     return geotiles
 end
 
