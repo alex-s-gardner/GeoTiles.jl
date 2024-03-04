@@ -457,7 +457,10 @@ to each dataframe.
 function group(df,geotiles)
     df[!, :gtidx] .= Int64(0)
     for r in eachrow(df)
-        r.gtidx = findfirst(GeoTiles.within.(r.latitude, r.longitude, geotiles.extent))
+         foo = findfirst(GeoTiles.within.(r.latitude, r.longitude, geotiles.extent))
+         if !isnothing(foo) 
+            r.gtidx = foo
+         end
     end
     df = groupby(df, :gtidx)
 
