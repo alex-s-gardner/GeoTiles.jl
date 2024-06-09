@@ -4,9 +4,9 @@ const world = Extent(Y=(-90, 90), X = (-180, 180))
 
 
 """
-    _extent(lat, lon, width)
+    _extent(y, x, width)
 
-Internal that returns extents of geotile given center latitude, longitude and geotile width
+Internal that returns extents of geotile given center x (e.g. longitude), y (e.g. latitude) and geotile width
 
 # Example
 ```julia-repl
@@ -14,14 +14,43 @@ julia> ext = GeoTiles._extent(80,80,2)
 Extent(X = (79.0, 81.0), Y = (79.0, 81.0))
 ```
 """
-function _extent(lat, lon, width)
+function _extent(x, y, width; alwaysxy=true)
+
+    if !alwaysxy
+        (x,y) = (y,x)
+    end
      
     halfwidth = width / 2;
-    extent = Extent(X=((lon - halfwidth), (lon + halfwidth)), Y=((lat - halfwidth), (lat + halfwidth)))
+    extent = Extent(X=((x - halfwidth), (x + halfwidth)), Y=((y - halfwidth), (y + halfwidth)))
     
     return extent 
 end
 
+
+"""
+    _polygon(y, lon, width)
+
+Internal that returns polygon geometreis of geotile given center yitude, longitude and 
+geotile width
+
+# Example
+```julia-repl
+julia> ext = GeoTiles._extent(80,80,2)
+Extent(X = (79.0, 81.0), Y = (79.0, 81.0))
+```
+"""
+function _polygon(x, y, width; crs = GFT.EPSG(4326), alwaysxy = true)
+
+    if !alwaysxy 
+        (x,y) = (y,x)
+    end
+
+    hw = width / 2
+    ring = GI.LinearRing([(x - hw, y - hw), (x - hw, y + hw), (x + hw, y + hw), (x + hw, y - hw)])
+    polygon = GI.Polygon([ring]; crs)
+
+    return polygon
+end
 
 """
     extent(id)
@@ -38,25 +67,28 @@ end
 
 
 """
-    within(lat, lon, extent::Extent)
+    within(x, y, extent::Extent)
 
 True if a point falls within extent
 # Example
 ```julia-repl
 julia> ext = GeoTiles._extent(80,80,2)
-Extent(Y = (79.0, 81.0), X = (79.0, 81.0))
+Extent(X = (79.0, 81.0), Y = (79.0, 81.0))
 julia> ind = GeoTiles.within(80., 80.1, ext)
 true
 julia> ind = GeoTiles.within(80., 81.1, ext)
 false
 ```
 """
-function within(lat, lon, extent::Extent)
+function within(x, y, extent::Extent; alwaysxy=true)
+    if !alwaysxy
+        (x,y) = (y,x)
+    end
     
-    in = (lat > extent.Y[1]) && 
-        (lat <= extent.Y[2]) && 
-        (lon > extent.X[1]) && 
-        (lon <= extent.X[2])
+    in = (y > extent.Y[1]) && 
+        (y <= extent.Y[2]) && 
+        (x > extent.X[1]) && 
+        (x <= extent.X[2])
 
     return in
 end
@@ -69,7 +101,7 @@ Crop geotile dataframe to only include data that falls within extent
 """
 function crop!(gt::DataFrame, extent)
 
-    ind = .!within.(gt.latitude, gt.longitude, Ref(extent))
+    ind = .!within.(gt.longitude, gt.latitude, Ref(extent))
     if any(ind)
         gt = deleteat!(gt,ind)
     end
@@ -133,17 +165,19 @@ function define(width::Number; extent=nothing)
     centerlat = (world.Y[1] + halfwidth):width:(world.Y[2] - halfwidth)
     centerlon = (world.X[1] + halfwidth):width:(world.X[2] - halfwidth)
 
-    extent0 = vec([_extent(lat, lon, width) for lon in(centerlon), lat in(centerlat)]);
+    extent0 = vec([_extent(lon, lat, width) for lon in (centerlon), lat in (centerlat)])
+    polygon0 = vec([_polygon(lon, lat, width) for lon in (centerlon), lat in (centerlat)])
 
     # trim to user supplied extent    
     if !isnothing(extent)
         ind = Extents.intersects.(Ref(extent), extent0)
         extent0 = extent0[ind]
+        polygon0 = polygon0[ind]
     end
     
     id = _id.(extent0)
     
-    geotiles = DataFrame(id=id, extent=extent0)
+    geotiles = DataFrame(id=id, extent=extent0, geometry=polygon0)
     return geotiles
 end
 
@@ -153,7 +187,7 @@ end
 
 Internal that returns the geotile id given a geotile `extent`
 """
-function _id(extent::Extent)  
+function _id(extent::Extent; alwaysxy=false)
 
     # determine minimum number of decimals for the id
     halfwidth = (extent.Y[2] .- extent.Y[1]) / 2
@@ -258,7 +292,10 @@ the relevant polar stereographic projection if outside of UTM limits.
 
 modified from: https://github.com/JuliaGeo/Geodesy.jl/blob/master/src/utm.jl    
 """
-function utm_epsg(lat::Real, lon::Real)
+function utm_epsg(lon::Real, lat::Real; alwaysxy=true)
+    if !alwaysxy
+        (lat,lon) = (lon,lat)
+    end
 |
     if lat > 84
         # NSIDC Sea Ice Polar Stereographic North

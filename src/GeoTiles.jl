@@ -10,6 +10,7 @@ module GeoTiles
     using Arrow
     import FastGeoProjections as FGP
     import GeoFormatTypes as GFT
+    import GeoInterface as GI
 
     include("utilities.jl")
 end
