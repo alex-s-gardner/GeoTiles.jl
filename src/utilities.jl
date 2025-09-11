@@ -127,6 +127,26 @@ function isgeotile(df)
 end
 
 
+"""
+    div_closeness(x, y) -> Number
+
+Return the minimum absolute remainder when dividing `x` by `y` or `-y`.
+
+Useful for checking how closely `x` is divisible by `y`, accounting for floating point precision.
+
+# Arguments
+- `x`: Number to be divided.
+- `y`: Divisor.
+
+# Returns
+- Minimum absolute deviation from exact divisibility.
+
+# Example
+julia> div_closeness(10.1, 2)
+0.09999999999999964
+"""
+div_closeness(x, y) = min(abs(mod(x, y)), abs(mod(x, -y)))
+
 # Defining a special GeoTile type is likely more effort than needed
 # struct GeoTile
 #    df::DataFrame
@@ -155,7 +175,9 @@ julia> GeoTiles.define(2)
 """
 function define(width::Number; extent=nothing)
 
-    if mod(180, width) != 0
+    # mod(180, 0.1) != 0 due to floating point precision issues (very technical)
+    # so we allow for a small tolerance
+    if div_closeness(x, y) < 1E-15
         error("a geotile width of $width does not divide evenly into 180")
     end
     
