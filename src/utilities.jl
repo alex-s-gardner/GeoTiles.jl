@@ -177,7 +177,7 @@ function define(width::Number; extent=nothing)
 
     # mod(180, 0.1) != 0 due to floating point precision issues (very technical)
     # so we allow for a small tolerance
-    if div_closeness(x, y) < 1E-15
+    if div_closeness(180, width) < 1E-15
         error("a geotile width of $width does not divide evenly into 180")
     end
     
